@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+conversation_logs/
+logs/
+
+# Screenshots
+*.png
+*.jpg
+*.jpeg
+
+# Environment variables
+.env
+.env.local
+
+# Streamlit
+.streamlit/
+
+# Browser automation
+.playwright/
+screenshots/
+
+# Project specific
+.cache/
+.pytest_cache/
+*.y4m
