@@ -11,3 +11,4 @@ browser-use
 openai>=1.0.0
 playwright
 streamlit
+langchain_openai

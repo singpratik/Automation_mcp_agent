@@ -1,7 +1,9 @@
 import streamlit as st
 import openai
 import os
-from agents.browser_agent import BrowserAgent
+from browser_use.agent.service import Agent
+from langchain_openai import ChatOpenAI
+import asyncio
 from agents.api_agent import APIAgent
 from agents.sql_agent import SQLAgent
 from agents.file_agent import FileAgent
@@ -656,7 +658,8 @@ def main():
         st.markdown('<div class="section-title" style="margin-top: 20px;">FILE & BROWSER OPERATIONS</div>', unsafe_allow_html=True)
         
         y4m_file = st.text_input("Y4M File", value="/Users/pratik/Downloads/Assesment/mcp_ai_testAgent/Johnny_1280x720_60.y4m", placeholder="/path/to/video.y4m")
-        
+        audio_file = st.text_input("Audio File", value="/Users/pratik/Downloads/Assesment/Ui_Automation/Resources/sample_audio.wav", placeholder="/path/to/audio.wav")
+
         # Y4M file validation with improved status indicators
         if y4m_file.strip():
             if os.path.exists(y4m_file.strip()):
@@ -675,6 +678,14 @@ def main():
                     st.markdown(f'<div class="status-indicator status-error">❌ Cannot read file: {str(e)}</div>', unsafe_allow_html=True)
             else:
                 st.markdown('<div class="status-indicator status-error">❌ Y4M file not found at specified path</div>', unsafe_allow_html=True)
+
+        # Audio file validation
+        if audio_file.strip():
+            if os.path.exists(audio_file.strip()):
+                file_size = os.path.getsize(audio_file.strip()) / (1024*1024)  # MB
+                st.markdown(f'<div class="status-indicator status-success">✅ Audio file found ({file_size:.1f} MB)</div>', unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="status-indicator status-error">❌ Audio file not found at specified path</div>', unsafe_allow_html=True)
         
         if st.button("🔒 Close Browser", use_container_width=True):
             if st.session_state.agent:
@@ -823,134 +834,78 @@ def main():
         should_use_automation = any(keyword in user_input.lower() for keyword in automation_keywords)
         
         if should_use_automation:
-            # Launch browser directly without blocking
+            # Run BrowserAgent with Y4M and audio file support
             try:
-                y4m_path = y4m_file.strip() if y4m_file.strip() and os.path.exists(y4m_file.strip()) else None
-                
-                # Create browser-use script with proper escaping
-                script_lines = [
-                    "import asyncio",
-                    "import os",
-                    "import sys",
-                    f"sys.path.append('{os.getcwd()}')",
-                    "",
-                    "from browser_use import Agent",
-                    "from browser_use.llm import ChatOpenAI",
-                    "",
-                    "async def run_vmock_automation():",
-                    "    try:",
-                    "        print('🚀 Starting VMock automation with browser-use...')",
-                    "",
-                    "        # Initialize LLM",
-                    "        llm = ChatOpenAI(",
-                    "            model='gpt-4o-mini',",
-                    f"            api_key='{os.getenv('OPENAI_API_KEY')}'",
-                    "        )",
-                    "",
-                    "        # Browser configuration",
-                    "        browser_args = [",
-                    "            '--no-first-run',",
-                    "            '--use-fake-ui-for-media-stream',",
-                    "            '--use-fake-device-for-media-stream',",
-                    "            '--autoplay-policy=no-user-gesture-required',",
-                    "            '--disable-web-security',",
-                    "            '--allow-running-insecure-content',",
-                    "            '--auto-accept-camera-and-microphone-capture',",
-                    "            '--allow-file-access-from-files',",
-                    "            '--disable-features=VizDisplayCompositor'",
-                    "        ]",
-                ]
-                
-                if y4m_path:
-                    script_lines.extend([
-                        f"        y4m_path = '{y4m_path}'",
-                        "        browser_args.append(f'--use-file-for-fake-video-capture={y4m_path}')",
-                        "        print(f'✅ Y4M file configured: {y4m_path}')",
-                    ])
-                
-                script_lines.extend([
-                    "",
-                    "        # Create the task prompt",
-                    "        task = '''Go to https://www.vmock.com/login and complete the following steps:",
-                    "1. Click on the Login button if needed",
-                    "2. Select 'Login with Email' if prompted",
-                    "3. Enter email: _7fresh@mailinator.com",
-                    "4. Enter password: Welcome@123",
-                    "5. Click the Login button",
-                    "6. Wait for the dashboard to load",
-                    "7. Click on the 'Interview' tab",
-                    "8. Click on 'EP'",
-                    "9. Click on 'Start Interview' button'''",
-                    "",
-                    "        print('🌐 Creating browser agent...')",
-                    "",
-                    "        # Create agent",
-                    "        agent = Agent(",
-                    "            task=task,",
-                    "            llm=llm,",
-                    "            use_vision=True,",
-                    "            browser_config={",
-                    "                'headless': False,",
-                    "                'args': browser_args",
-                    "            }",
-                    "        )",
-                    "",
-                    "        print('🤖 Starting automation...')",
-                    "",
-                    "        # Run the automation",
-                    "        result = await agent.run()",
-                    "",
-                    "        print(f'✅ Automation completed: {result}')",
-                    "",
-                    "        # Keep browser open for verification",
-                    "        input('⏸️  Press Enter to close browser...')",
-                    "",
-                    "    except Exception as e:",
-                    "        print(f'❌ Error: {str(e)}')",
-                    "        import traceback",
-                    "        traceback.print_exc()",
-                    "",
-                    "if __name__ == '__main__':",
-                    "    asyncio.run(run_vmock_automation())"
-                ])
-                
-                script_content = "\n".join(script_lines)
-                
-                # Write and launch script
-                with open("browser_launch.py", "w") as f:
-                    f.write(script_content)
-                
-                import subprocess
-                subprocess.Popen(["python3", "browser_launch.py"])
-                
-                # Add progress message
+                from agents.browser_agent import BrowserAgent
+                browser_agent = BrowserAgent(
+                    y4m_file_path=y4m_file.strip(),
+                    audio_file_path=audio_file.strip()
+                )
+                result = browser_agent.run_task(user_input)
+                # Format AgentHistoryList or similar objects for user-friendly output
+                display_content = None
+                if hasattr(result, "all_results"):
+                    # Try to extract the last extracted_content that is not None
+                    for action in reversed(getattr(result, "all_results", [])):
+                        if hasattr(action, "extracted_content") and action.extracted_content:
+                            display_content = action.extracted_content
+                            break
+                elif isinstance(result, dict) and "all_results" in result:
+                    for action in reversed(result["all_results"]):
+                        if "extracted_content" in action and action["extracted_content"]:
+                            display_content = action["extracted_content"]
+                            break
+                if not display_content:
+                    display_content = str(result)
                 st.session_state.conversation_history.append({
                     "role": "assistant", 
-                    "content": "Task in progress",
+                    "content": f"{display_content}",
                     "timestamp": dt.datetime.now().strftime("%H:%M:%S")
                 })
-                
             except Exception as e:
                 st.session_state.conversation_history.append({
                     "role": "assistant", 
-                    "content": f"❌ Failed to launch browser: {str(e)}",
+                    "content": f"❌ Failed to run BrowserAgent: {str(e)}",
                     "timestamp": dt.datetime.now().strftime("%H:%M:%S")
                 })
         else:
-            # Handle all tasks through browser agent for consistency
+            # Handle all tasks through browser-use Agent for consistency
             try:
-                if not st.session_state.agent:
-                    y4m_path = y4m_file.strip() if y4m_file.strip() and os.path.exists(y4m_file.strip()) else None
-                    st.session_state.agent = BrowserAgent(
-                        enable_media_permissions=enable_media,
-                        y4m_file_path=y4m_path
+                async def run_browser_use_agent(task):
+                    llm = ChatOpenAI(
+                        model="gpt-4o-mini",
+                        api_key=os.getenv("OPENAI_API_KEY")
                     )
-                
-                result = st.session_state.agent.run_task(user_input)
-                
+                    agent = Agent(
+                        task=task,
+                        llm=llm,
+                        use_vision=True
+                    )
+                    result = await agent.run(max_steps=10)
+                    return result
+
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(run_browser_use_agent(user_input))
+                loop.close()
+
+                # Format AgentHistoryList or similar objects for user-friendly output
+                display_content = None
+                if hasattr(result, "all_results"):
+                    for action in reversed(getattr(result, "all_results", [])):
+                        if hasattr(action, "extracted_content") and action.extracted_content:
+                            display_content = action.extracted_content
+                            break
+                elif isinstance(result, dict) and "all_results" in result:
+                    for action in reversed(result["all_results"]):
+                        if "extracted_content" in action and action["extracted_content"]:
+                            display_content = action["extracted_content"]
+                            break
+                if not display_content:
+                    display_content = str(result)
                 st.session_state.conversation_history.append({
                     "role": "assistant", 
-                    "content": result,
+                    "content": f"{display_content}",
                     "timestamp": dt.datetime.now().strftime("%H:%M:%S")
                 })
             except Exception as e:

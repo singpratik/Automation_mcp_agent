@@ -3,17 +3,26 @@ from playwright.async_api import async_playwright
 import os
 
 class BrowserAgent:
-    def __init__(self, enable_media_permissions=True, y4m_file_path=None):
+    def __init__(self, enable_media_permissions=True, y4m_file_path=None, audio_file_path=None):
         self.y4m_file_path = y4m_file_path or "/Users/pratik/Downloads/Assesment/mcp_ai_testAgent/Johnny_1280x720_60.y4m"
+        self.audio_file_path = audio_file_path
         self.live_logs = []
         self.browser = None
         self.page = None
     
     def run_task(self, prompt):
+        import traceback
         try:
-            return asyncio.run(self._run_task(prompt))
+            try:
+                loop = asyncio.get_running_loop()
+                # If we're in an event loop (e.g., Streamlit), run as a task and wait for result
+                return loop.run_until_complete(self._run_task(prompt))
+            except RuntimeError:
+                # No event loop running, safe to use asyncio.run
+                return asyncio.run(self._run_task(prompt))
         except Exception as e:
-            return f"Error: {str(e)}"
+            tb = traceback.format_exc()
+            return f"Error: {str(e)}\nTraceback:\n{tb}"
     
     async def _run_task(self, prompt):
         try:
@@ -25,6 +34,8 @@ class BrowserAgent:
                 "--disable-web-security",
                 "--autoplay-policy=no-user-gesture-required"
             ]
+            if self.audio_file_path:
+                args.append(f"--use-file-for-fake-audio-capture={self.audio_file_path}")
             
             async with async_playwright() as p:
                 self.browser = await p.chromium.launch(headless=False, args=args)
