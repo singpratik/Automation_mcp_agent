@@ -11,14 +11,20 @@ class SQLAgent:
     def _parse_prompt(self, prompt: str) -> dict:
         """
         Parses prompts like:
-        'query=SELECT * FROM users db_path=mydb.sqlite'
+        'query="SELECT * FROM users" db_path=mydb.sqlite'
         """
+        if not prompt or not prompt.strip():
+            return {}
+        
         task = {}
-        parts = prompt.split()
-        for part in parts:
-            if '=' in part:
-                key, value = part.split('=', 1)
-                task[key.strip()] = value.strip()
+        # Better parsing that handles quoted values
+        import re
+        pattern = r'(\w+)=(?:"([^"]*)"|([^\s]+))'
+        matches = re.findall(pattern, prompt)
+        for match in matches:
+            key = match[0]
+            value = match[1] if match[1] else match[2]
+            task[key.strip()] = value.strip()
         return task
 
     def _handle(self, task: dict) -> dict:
@@ -29,18 +35,29 @@ class SQLAgent:
             return {"error": "Missing SQL query."}
 
         try:
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute(query)
+            with sqlite3.connect(db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(query)
 
-            if query.strip().lower().startswith("select"):
-                rows = cursor.fetchall()
-                result = {"rows": rows}
-            else:
-                conn.commit()
-                result = {"status": "Query executed"}
-
-            conn.close()
-            return result
+                if query.strip().lower().startswith("select"):
+                    rows = cursor.fetchall()
+                    result = {"rows": rows}
+                else:
+                    conn.commit()
+                    result = {"status": "Query executed"}
+                return result
+        except sqlite3.Error as e:
+            return {"error": f"Database error: {str(e)}"}
         except Exception as e:
-            return {"error": str(e)}
+            return {"error": f"Unexpected error: {str(e)}"}
+
+    def run_db_tests(self, db_tests):
+        """
+        Run a list of DB test prompts and return their results.
+        Each test in db_tests should be a string prompt describing the DB operation.
+        """
+        results = []
+        for test in db_tests:
+            result = self.run(test)
+            results.append({"test": test, "result": result})
+        return results

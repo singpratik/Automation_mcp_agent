@@ -51,6 +51,15 @@ logs/
 # Environment variables
 .env
 .env.local
+.env.production
+.env.development
+*.key
+*.pem
+
+# Sensitive files
+api_keys.txt
+credentials.json
+secrets.yaml
 
 # Streamlit
 .streamlit/
@@ -63,3 +72,15 @@ screenshots/
 .cache/
 .pytest_cache/
 *.y4m
+browser_debug.log
+streamlit_debug.log
+test_write_permissions.txt
+
+# Generated artifacts
+generated_audio/
+allure-report/
+browser_screenshots/
+nohup.out
+
+# Backup files
+*.bak

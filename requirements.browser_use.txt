@@ -1,0 +1,47 @@
+# Browser-Use Web UI Dependencies
+# Install with: pip install -r requirements.browser_use.txt
+
+# Core browser-use library
+browser-use>=0.1.47
+
+# LLM Providers (install based on your needs)
+# OpenAI
+langchain-openai>=0.1.0
+openai>=1.0.0
+
+# Anthropic Claude
+langchain-anthropic>=0.1.0
+
+# Google Gemini
+langchain-google-genai>=1.0.0
+
+# Ollama (local models)
+langchain-ollama>=0.1.0
+
+# Core dependencies
+langchain>=0.1.0
+langchain-core>=0.1.0
+playwright>=1.40.0
+
+# Async support
+nest-asyncio>=1.5.8
+asyncio>=3.4.3
+
+# Optional: Gradio Web UI support
+gradio>=4.0.0
+gradio-client>=0.8.0
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+
+# Logging and monitoring
+structlog>=24.0.0
+
+# Optional: For custom browser profiles
+selenium>=4.0.0  # If you need Selenium fallback
+
+# Note: After installation, run:
+# playwright install --with-deps chromium
+# Or for specific browser:
+# playwright install --with-deps chrome
